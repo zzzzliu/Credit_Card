@@ -68,6 +68,7 @@ below:
 
     --maxiter: Maximum number of iterations
     --N: Parallelization Level
+    --testData: Test data
     ```
     The epsilon controls the accuracy of final gradient descent stage. If
     the change of loss function is smaller than epsilon, we exit iteration.
@@ -93,13 +94,34 @@ below:
     bad `gain` and `power` settings), we have to guarantee the program
     can exit normally.
 
-    Finally, `N` controls the level of parallelization. Recall the idea of
+    The `N` controls the level of parallelization. Recall the idea of
     MapReduce, `N` will partitions the fold as `N` parts, which will utilize
     the parallel-computation mechanism of Spark, and speed up the calculation
     of each fold.
 
+    Finally, the `testData` is the index of the fold to be used as testing
+    data.
+
 ## Testing
 
 After training stage, we get the best lambda. But for logistic regression,
-there is another significant parameter to be measured - Beta.
+there is another significant parameter to be measured - Beta. Here, we
+based on the best lambda, and use the first 4 folds (together, not cross
+validation this time) to train the best beta. Then test our model on the testing set.
 
+At previous training stage, every time we use 3 folds for training and 1 fold for
+cross-validation iteratively, and got 4 AUCs. It seems we can also get best
+beta at this point - average 4 betas. But this is not a good idea. Instead,
+we train the best beta at testing stage and utilize all 4 folds to measure
+it.
+
+To train the Beta and test the model
+
+```
+$ python CreditCard.py "splitCSV/" "output/" 4 --bestlam 30 --testData 5
+```
+
+This will use all first 4 folds as training set to train the Beta, and use
+the fifth fold as the test set. The best lambda is set `30` in this example.
+In practical use, it should be got from previous training stage - the
+lambda with highest average AUC.

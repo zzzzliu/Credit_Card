@@ -149,7 +149,6 @@ if __name__ == "__main__":
     for k in range(args.folds):
         folds[k] = readDataRDD(args.data + "/fold" + str(k), sc)
 
-    rmtree(args.output)
     ensure_dir(args.output)
 
     if args.bestlam:
