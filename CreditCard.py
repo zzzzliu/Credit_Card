@@ -5,6 +5,7 @@ import random
 from time import time
 from pyspark import SparkContext
 
+
 def logisticFunction(beta, x):
     """
     Given a numpy array beta, a numpy array x, return the logistic function value
@@ -13,10 +14,11 @@ def logisticFunction(beta, x):
     :return: logistic value
     """
 
-    #print "in logisticFunction", beta.dot(x)
+    # print "in logisticFunction", beta.dot(x)
 
     np.seterr(all='ignore')
     return 1.0 / (1 + np.exp(-1.0 * beta.dot(x)))
+
 
 def logisticLoss(beta,x,y):
     """  Given a numpy array beta, a numpy array x, and a binary value y in {-1,+1}, compute the logistic loss
@@ -24,18 +26,19 @@ def logisticLoss(beta,x,y):
                     l(β;x,y) = log( 1.0 + exp(-y * <β,x>) )
 
          The input is:
-    	    - beta: a numpy array β
-    	    - x: a numpy array x
+            - beta: a numpy array β
+            - x: a numpy array x
             - y: a binary value in {-1,+1}
 
          The return is:
             - l: a double value
 
     """
-    #print "in LogisticLoss", beta.dot(x)
+    # print "in LogisticLoss", beta.dot(x)
 
     np.seterr(all='ignore')
     return np.log(1.0 + np.exp(-1.0 * y * beta.dot(x)))
+
 
 def gradLogisticLoss(beta,x,y):
     """   Given a numpy array beta, a numpy array x, and a binary value y in {-1,+1}, compute the compute the
@@ -44,18 +47,20 @@ def gradLogisticLoss(beta,x,y):
               ∇l(B;x,y) = -y / (1.0 + exp(y <β,x> )) * x
 
          The input is:
-    	    - beta: a numpy array β
-    	    - x: a numpy array x
+            - beta: a numpy array β
+            - x: a numpy array x
             - y: a binary value in {-1,+1}
 
          The return is:
             - ∇l: a numpy array
 
     """
-    #print "in gradLogisticLoss", beta.dot(x)
+
+    # print "in gradLogisticLoss", beta.dot(x)
 
     np.seterr(all='ignore')
     return (-1.0 * y) / (1.0 + np.exp(y * beta.dot(x))) * x
+
 
 def lineSearch(fun, x, grad, fx, gradNormSq, a=0.2, b=0.6):
     """ Given function fun, a current argument x, and gradient grad=∇fun(x),
@@ -65,8 +70,8 @@ def lineSearch(fun, x, grad, fx, gradNormSq, a=0.2, b=0.6):
         Both x and grad are presumed to be SparseVectors.
 
         Inputs are:
-	    - fun: the objective function f.
-	    - x: the present input (a Sparse Vector)
+            - fun: the objective function f.
+            - x: the present input (a Sparse Vector)
             - grad: the present gradient
             - fx: precomputed f(x)
             - grad: precomputed ∇f(x)
@@ -82,6 +87,7 @@ def lineSearch(fun, x, grad, fx, gradNormSq, a=0.2, b=0.6):
         t = b * t
     return t
 
+
 def readBeta(input):
     """
         Read a vector β from CSV file input
@@ -92,12 +98,14 @@ def readBeta(input):
                      .split(',')
         return np.array( [float(val) for val in str_list] )
 
+
 def writeBeta(output,beta):
     """
         Write a vector β to a CSV file ouptut
     """
     with open(output,'w') as fh:
         fh.write(','.join(map(str, beta.tolist()))+'\n')
+
 
 def readDataRDD(input_file,spark_context):
     """  Read data from an input file. Each line of the file has the form
@@ -117,6 +125,7 @@ def readDataRDD(input_file,spark_context):
                         .map(lambda (features, label): (np.array([float(x) for x in features]), float(label))) \
                         .map(lambda (features, label): (features, -1 if label < 1 else 1))
 
+
 def totalLossRDD(dataRDD,beta,lam = 0.0):
     """  Given a numpy array beta and a RDD dataset, compute the regularized total logistic loss :
 
@@ -133,6 +142,7 @@ def totalLossRDD(dataRDD,beta,lam = 0.0):
                   .reduce(lambda x, y: x + y)
     return loss + lam * beta.dot(beta)
 
+
 def gradTotalLossRDD(dataRDD,beta,lam = 0.0):
     """  Given a numpy array beta and a RDD dataset, compute the gradient of regularized total logistic loss :
 
@@ -148,6 +158,7 @@ def gradTotalLossRDD(dataRDD,beta,lam = 0.0):
     loss = dataRDD.map(lambda (x, y): gradLogisticLoss(beta, x, y)) \
                   .reduce(lambda x, y: x + y)
     return loss + 2 * lam * beta
+
 
 def test(dataRDD,beta):
     """ Output the Area Under the Curve (AUC) of the Receiver Operating Characteristic (ROC) Curve, as a evaluation of
@@ -181,8 +192,8 @@ def test(dataRDD,beta):
     scoresLabels = dataRDD.map(lambda (x, y): (logisticFunction(beta, x), y)).sortByKey().cache()
     P = dataRDD.filter(lambda (x, y): y == 1).count()
     N = dataRDD.filter(lambda (x, y): y == -1).count()
-    #print P
-    #print N
+    # print P
+    # print N
 
     auc = 0.0
     count = 0.0
@@ -195,6 +206,7 @@ def test(dataRDD,beta):
     scoresLabels.unpersist()
     return auc
 
+
 def trueOrFalse(x, y, beta, tao):
     if logisticFunction(beta, x) > tao:
         if y > 0:
@@ -206,6 +218,7 @@ def trueOrFalse(x, y, beta, tao):
             return "TN"
         else:
             return "FN"
+
 
 def ROCandPrecionRecall(dataRDD, beta):
     taos = np.arange(0,1,0.01)
@@ -223,6 +236,7 @@ def ROCandPrecionRecall(dataRDD, beta):
         Precision.append(1.0 * TP / (TP + FP))
         FPR.append(1.0 * FP / (FP + TN))
     return taos, Recall, Precision, FPR
+
 
 def train(dataRDD, lam, beta_0, gain, power, max_iter = 100, eps = 0.1, test_data = None):
     """ Train a logistic classifier from deta.
@@ -261,8 +275,8 @@ def train(dataRDD, lam, beta_0, gain, power, max_iter = 100, eps = 0.1, test_dat
         gradNormSq = grad.dot(grad)
         gradNorm = np.sqrt(gradNormSq)
 
-        #fun = lambda x: totalLossRDD(dataRDD, x, lam)
-        #gamma = lineSearch(fun, beta, grad, obj, gradNormSq)
+        # fun = lambda x: totalLossRDD(dataRDD, x, lam)
+        # gamma = lineSearch(fun, beta, grad, obj, gradNormSq)
         gamma = gain / k ** power
         beta = beta - gamma * grad
 
@@ -273,7 +287,7 @@ def train(dataRDD, lam, beta_0, gain, power, max_iter = 100, eps = 0.1, test_dat
         fh1.write('\n')
         fh2.write(str(gradNorm))
         fh2.write('\n')
-        #print beta
+        # print beta
     fh1.close()
     fh2.close()
     if test_data:
@@ -282,14 +296,15 @@ def train(dataRDD, lam, beta_0, gain, power, max_iter = 100, eps = 0.1, test_dat
     else:
         return beta, None
 
+
 if __name__ == "__main__":
     # settings
     parser = argparse.ArgumentParser(description='Parallel Logistic Regression', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('data', help='Data Directory')
     parser.add_argument('folds', type=int, help='Number of folds')
     parser.add_argument('--epsilon', default=0.01, type=float, help="Desired objective accuracy")
-    parser.add_argument('--gain',default=0.001,type=float,help ="Gain")
-    parser.add_argument('--power',default=0.2,type=float,help ="Gain Exponent")
+    parser.add_argument('--gain', default=0.001, type=float, help="Gain")
+    parser.add_argument('--power', default=0.2, type=float, help="Gain Exponent")
 
     parser.add_argument('--lamstart', default=0, type=int, help="Regularization parameter (start) for user features")
     parser.add_argument('--lamend', default=50, type=int, help="Regularization parameter (end) for user features")
@@ -307,7 +322,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     sc = SparkContext(appName='Parallel Logistic Regression')
     if not args.verbose: sc.setLogLevel("ERROR")
-
 
     # generate k-folds
     # folds = readDataRDD(args.data, sc).randomSplit(weights = [1.0 / args.folds] * args.folds)
@@ -360,7 +374,6 @@ if __name__ == "__main__":
         fh = open(args.output + '_save_Beta_' + str(args.bestlam), 'w')
         fh.write(str(beta))
         fh.close()
-
 
     else:
         for lam in range(args.lamstart, args.lamend + args.laminterval, args.laminterval):
